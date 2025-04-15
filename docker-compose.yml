@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: brasilapi-explorer
+    ports:
+      - "5002:5002"
+    environment:
+      - FLASK_ENV=production
+    container_name: brasilapi-container

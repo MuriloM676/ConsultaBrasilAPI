@@ -107,10 +107,51 @@
                 font-size: 0.9rem;
             }
         }
+        body.dark-mode {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #e0e0e0;
+        }
+        body.dark-mode .card {
+            background-color: #1e2a38;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        body.dark-mode .result {
+            background-color: #263544;
+        }
+        body.dark-mode .data-table th {
+            background-color: #2c3e50;
+            color: #e0e0e0;
+        }
+        body.dark-mode .data-table td, body.dark-mode .data-table th {
+            border-bottom: 1px solid #455a64;
+        }
+        body.dark-mode .alert-info {
+            background-color: #2c5364;
+            color: #e0e0e0;
+        }
+        body.dark-mode .alert-danger {
+            background-color: #9b2d30;
+            color: #e0e0e0;
+        }
+        body.dark-mode .btn-primary {
+            background-color: #1e88e5;
+            border-color: #1e88e5;
+        }
+        body.dark-mode .btn-primary:hover {
+            background-color: #1565c0;
+            border-color: #1565c0;
+        }
+        body.dark-mode .btn-secondary {
+            background-color: #546e7a;
+            border-color: #546e7a;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-5">
+        <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-outline-secondary" id="theme-toggle"><i class="bi bi-moon"></i> Modo Escuro</button>
+        </div>
         <h1 class="text-center mb-4">BrasilAPI Explorer</h1>
         <div class="row">
             <!-- Bancos -->
@@ -456,6 +497,20 @@
             input.classList.remove('input-error');
             return null;
         }
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.toggle('dark-mode');
+            const button = document.getElementById('theme-toggle');
+            button.innerHTML = isDark ? '<i class="bi bi-sun"></i> Modo Claro' : '<i class="bi bi-moon"></i> Modo Escuro';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            toggleTheme();
+        }
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        });
 
         function validateCorretorasCNPJ(input) {
             const value = input.value;

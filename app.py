@@ -269,4 +269,4 @@ def get_taxas():
         return jsonify({"status": "error", "message": str(err)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(host='0.0.0.0',port=5002, debug=True)
