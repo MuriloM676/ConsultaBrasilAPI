@@ -33,8 +33,12 @@ def get_banks():
 @app.route('/api/cambio', methods=['GET'])
 def get_cambio():
     try:
-        logger.info("Consultando a rota /cambio na BrasilAPI")
-        response = requests.get(f"{BRASIL_API_URL}/cambio?currency=USD")
+        date = request.args.get('date')  # Ex.: 2025-04-15
+        logger.info(f"Consultando a rota /cambio na BrasilAPI com data: {date}")
+        params = {'currency': 'USD'}
+        if date:
+            params['date'] = date
+        response = requests.get(f"{BRASIL_API_URL}/cambio", params=params)
         response.raise_for_status()
         data = response.json()
         return jsonify({"status": "success", "data": data}), 200
@@ -82,11 +86,24 @@ def get_cnpj(cnpj):
 @app.route('/api/corretoras', methods=['GET'])
 def get_corretoras():
     try:
-        logger.info("Consultando a rota /corretoras/v1 na BrasilAPI")
-        response = requests.get(f"{BRASIL_API_URL}/corretoras/v1")
-        response.raise_for_status()
-        data = response.json()
-        return jsonify({"status": "success", "data": data[:5]}), 200  # Limita a 5 corretoras
+        cnpj = request.args.get('cnpj')  # Ex.: 03614922000189
+        if cnpj:
+            # Validação básica de CNPJ (14 dígitos numéricos)
+            if not cnpj.isdigit() or len(cnpj) != 14:
+                logger.warning(f"CNPJ inválido recebido: {cnpj}")
+                return jsonify({"status": "error", "message": "CNPJ deve ter 14 dígitos numéricos"}), 400
+            
+            logger.info(f"Consultando a rota /corretoras/v1/{cnpj} na BrasilAPI")
+            response = requests.get(f"{BRASIL_API_URL}/corretoras/v1/{cnpj}")
+            response.raise_for_status()
+            data = response.json()
+            return jsonify({"status": "success", "data": data}), 200
+        else:
+            logger.info("Consultando a rota /corretoras/v1 na BrasilAPI")
+            response = requests.get(f"{BRASIL_API_URL}/corretoras/v1")
+            response.raise_for_status()
+            data = response.json()
+            return jsonify({"status": "success", "data": data[:5]}), 200  # Limita a 5 corretoras
     except requests.exceptions.RequestException as err:
         logger.error(f"Erro ao consultar /corretoras/v1: {str(err)}")
         return jsonify({"status": "error", "message": str(err)}), 500
@@ -252,4 +269,4 @@ def get_taxas():
         return jsonify({"status": "error", "message": str(err)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

@@ -5,21 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrasilAPI Explorer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #e6f0fa 0%, #f8f9fa 100%);
         }
         .card {
             margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .result {
-            margin-top: 20px;
-            padding: 15px;
+            margin-top: 15px;
+            padding: 10px;
             background-color: #fff;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            max-height: 300px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            max-height: 200px;
             overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+        .result.collapsed {
+            max-height: 0;
+            padding: 0;
+            overflow: hidden;
         }
         .input-error {
             border-color: #dc3545;
@@ -36,6 +55,58 @@
         .copy-btn {
             font-size: 0.9rem;
         }
+        .btn-primary {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-primary:hover {
+            background-color: #003d82;
+            border-color: #003d82;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+        }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        @media (max-width: 576px) {
+            .card-title {
+                font-size: 1.1rem;
+            }
+            .btn {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+            .form-control {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -46,10 +117,12 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Bancos</h5>
+                        <h5 class="card-title"><i class="bi bi-bank"></i> Bancos</h5>
                         <button class="btn btn-primary me-2" onclick="fetchData('/api/banks', 'banks-result', formatBanks)">Consultar</button>
                         <button class="btn btn-secondary" onclick="clearResult('banks-result')">Limpar</button>
-                        <div id="banks-result" class="result"></div>
+                        <div id="banks-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('banks-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -57,10 +130,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Câmbio (USD)</h5>
-                        <button class="btn btn-primary me-2" onclick="fetchData('/api/cambio', 'cambio-result', formatCambio)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('cambio-result')">Limpar</button>
-                        <div id="cambio-result" class="result"></div>
+                        <h5 class="card-title"><i class="bi bi-currency-dollar"></i> Câmbio (USD)</h5>
+                        <input type="text" id="cambio-input" class="form-control mb-2" placeholder="Data (ex.: 2025-04-15)" data-bs-toggle="tooltip" title="Digite a data no formato AAAA-MM-DD ou deixe em branco para o valor mais recente">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cambio', 'cambio-input', 'cambio-result', validateCambioDate, formatCambio, true)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('cambio-result', 'cambio-input')">Limpar</button>
+                        <div id="cambio-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('cambio-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -68,11 +144,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">CEP</h5>
-                        <input type="text" id="cep-input" class="form-control mb-2" placeholder="Ex.: 01001000">
+                        <h5 class="card-title"><i class="bi bi-geo-alt"></i> CEP</h5>
+                        <input type="text" id="cep-input" class="form-control mb-2" placeholder="Ex.: 01001000" data-bs-toggle="tooltip" title="Digite um CEP com 8 dígitos numéricos">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cep/', 'cep-input', 'cep-result', validateCEP, formatCEP)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('cep-result')">Limpar</button>
-                        <div id="cep-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('cep-result', 'cep-input')">Limpar</button>
+                        <div id="cep-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('cep-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -80,11 +158,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">CNPJ</h5>
-                        <input type="text" id="cnpj-input" class="form-control mb-2" placeholder="Ex.: 27865757000102">
+                        <h5 class="card-title"><i class="bi bi-building"></i> CNPJ</h5>
+                        <input type="text" id="cnpj-input" class="form-control mb-2" placeholder="Ex.: 27865757000102" data-bs-toggle="tooltip" title="Digite um CNPJ com 14 dígitos numéricos">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cnpj/', 'cnpj-input', 'cnpj-result', validateCNPJ, formatCNPJ)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('cnpj-result')">Limpar</button>
-                        <div id="cnpj-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('cnpj-result', 'cnpj-input')">Limpar</button>
+                        <div id="cnpj-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('cnpj-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -92,10 +172,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Corretoras</h5>
-                        <button class="btn btn-primary me-2" onclick="fetchData('/api/corretoras', 'corretoras-result', formatCorretoras)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('corretoras-result')">Limpar</button>
-                        <div id="corretoras-result" class="result"></div>
+                        <h5 class="card-title"><i class="bi bi-briefcase"></i> Corretoras</h5>
+                        <input type="text" id="corretoras-input" class="form-control mb-2" placeholder="CNPJ (ex.: 03614922000189)" data-bs-toggle="tooltip" title="Digite um CNPJ com 14 dígitos ou deixe em branco para listar até 5 corretoras">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/corretoras', 'corretoras-input', 'corretoras-result', validateCorretorasCNPJ, formatCorretoras, true)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('corretoras-result', 'corretoras-input')">Limpar</button>
+                        <div id="corretoras-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('corretoras-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -103,11 +186,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">CPTEC (Clima)</h5>
-                        <input type="text" id="cptec-input" class="form-control mb-2" placeholder="Código da cidade (ex.: 244)">
+                        <h5 class="card-title"><i class="bi bi-cloud-sun"></i> CPTEC (Clima)</h5>
+                        <input type="text" id="cptec-input" class="form-control mb-2" placeholder="Código da cidade (ex.: 244)" data-bs-toggle="tooltip" title="Digite o código numérico da cidade">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cptec/', 'cptec-input', 'cptec-result', validateCityCode, formatCPTEC)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('cptec-result')">Limpar</button>
-                        <div id="cptec-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('cptec-result', 'cptec-input')">Limpar</button>
+                        <div id="cptec-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('cptec-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -115,11 +200,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">DDD</h5>
-                        <input type="text" id="ddd-input" class="form-control mb-2" placeholder="Ex.: 11">
+                        <h5 class="card-title"><i class="bi bi-telephone"></i> DDD</h5>
+                        <input type="text" id="ddd-input" class="form-control mb-2" placeholder="Ex.: 11" data-bs-toggle="tooltip" title="Digite um DDD com 2 dígitos">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ddd/', 'ddd-input', 'ddd-result', validateDDD, formatDDD)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('ddd-result')">Limpar</button>
-                        <div id="ddd-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('ddd-result', 'ddd-input')">Limpar</button>
+                        <div id="ddd-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('ddd-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -127,11 +214,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Feriados Nacionais</h5>
-                        <input type="text" id="feriados-input" class="form-control mb-2" placeholder="Ano (ex.: 2025)">
+                        <h5 class="card-title"><i class="bi bi-calendar-event"></i> Feriados Nacionais</h5>
+                        <input type="text" id="feriados-input" class="form-control mb-2" placeholder="Ano (ex.: 2025)" data-bs-toggle="tooltip" title="Digite um ano entre 1900 e 2100">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/feriados/', 'feriados-input', 'feriados-result', validateYear, formatFeriados)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('feriados-result')">Limpar</button>
-                        <div id="feriados-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('feriados-result', 'feriados-input')">Limpar</button>
+                        <div id="feriados-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('feriados-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -139,11 +228,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">FIPE</h5>
-                        <input type="text" id="fipe-input" class="form-control mb-2" placeholder="Código FIPE (ex.: 038003-1)">
+                        <h5 class="card-title"><i class="bi bi-car-front"></i> FIPE</h5>
+                        <input type="text" id="fipe-input" class="form-control mb-2" placeholder="Código FIPE (ex.: 038003-1)" data-bs-toggle="tooltip" title="Digite um código FIPE no formato XXXXXX-Y">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/fipe/', 'fipe-input', 'fipe-result', validateFIPE, formatFIPE)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('fipe-result')">Limpar</button>
-                        <div id="fipe-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('fipe-result', 'fipe-input')">Limpar</button>
+                        <div id="fipe-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('fipe-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -151,11 +242,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">IBGE (Nomes)</h5>
-                        <input type="text" id="ibge-input" class="form-control mb-2" placeholder="Nome (ex.: Maria)">
+                        <h5 class="card-title"><i class="bi bi-person"></i> IBGE (Nomes)</h5>
+                        <input type="text" id="ibge-input" class="form-control mb-2" placeholder="Nome (ex.: Maria)" data-bs-toggle="tooltip" title="Digite um nome para consultar sua frequência">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ibge/nomes/', 'ibge-input', 'ibge-result', validateName, formatIBGE)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('ibge-result')">Limpar</button>
-                        <div id="ibge-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('ibge-result', 'ibge-input')">Limpar</button>
+                        <div id="ibge-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('ibge-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,11 +256,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">ISBN</h5>
-                        <input type="text" id="isbn-input" class="form-control mb-2" placeholder="Ex.: 9788532503411">
+                        <h5 class="card-title"><i class="bi bi-book"></i> ISBN</h5>
+                        <input type="text" id="isbn-input" class="form-control mb-2" placeholder="Ex.: 9788532503411" data-bs-toggle="tooltip" title="Digite um ISBN com 10 ou 13 dígitos">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/isbn/', 'isbn-input', 'isbn-result', validateISBN, formatISBN)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('isbn-result')">Limpar</button>
-                        <div id="isbn-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('isbn-result', 'isbn-input')">Limpar</button>
+                        <div id="isbn-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('isbn-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -175,11 +270,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">NCM</h5>
-                        <input type="text" id="ncm-input" class="form-control mb-2" placeholder="Código NCM (ex.: 0101.21.00)">
+                        <h5 class="card-title"><i class="bi bi-box"></i> NCM</h5>
+                        <input type="text" id="ncm-input" class="form-control mb-2" placeholder="Código NCM (ex.: 0101.21.00)" data-bs-toggle="tooltip" title="Digite um código NCM no formato XXXX.XX.XX">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ncm/', 'ncm-input', 'ncm-result', validateNCM, formatNCM)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('ncm-result')">Limpar</button>
-                        <div id="ncm-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('ncm-result', 'ncm-input')">Limpar</button>
+                        <div id="ncm-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('ncm-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -187,10 +284,12 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">PIX</h5>
+                        <h5 class="card-title"><i class="bi bi-qr-code"></i> PIX</h5>
                         <button class="btn btn-primary me-2" onclick="fetchData('/api/pix', 'pix-result', formatPIX)">Consultar</button>
                         <button class="btn btn-secondary" onclick="clearResult('pix-result')">Limpar</button>
-                        <div id="pix-result" class="result"></div>
+                        <div id="pix-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('pix-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -198,11 +297,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Registro BR</h5>
-                        <input type="text" id="registrobr-input" class="form-control mb-2" placeholder="Domínio (ex.: google.com.br)">
+                        <h5 class="card-title"><i class="bi bi-globe"></i> Registro BR</h5>
+                        <input type="text" id="registrobr-input" class="form-control mb-2" placeholder="Domínio (ex.: google.com.br)" data-bs-toggle="tooltip" title="Digite um domínio com pelo menos um ponto">
                         <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/registrobr/', 'registrobr-input', 'registrobr-result', validateDomain, formatRegistroBR)">Consultar</button>
-                        <button class="btn btn-secondary" onclick="clearResult('registrobr-result')">Limpar</button>
-                        <div id="registrobr-result" class="result"></div>
+                        <button class="btn btn-secondary" onclick="clearResult('registrobr-result', 'registrobr-input')">Limpar</button>
+                        <div id="registrobr-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('registrobr-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -210,10 +311,12 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Taxas</h5>
+                        <h5 class="card-title"><i class="bi bi-percent"></i> Taxas</h5>
                         <button class="btn btn-primary me-2" onclick="fetchData('/api/taxas', 'taxas-result', formatTaxas)">Consultar</button>
                         <button class="btn btn-secondary" onclick="clearResult('taxas-result')">Limpar</button>
-                        <div id="taxas-result" class="result"></div>
+                        <div id="taxas-result" class="result collapsed">
+                            <button class="btn btn-link btn-sm" onclick="toggleResult('taxas-result')">Expandir/Recolher</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -221,9 +324,26 @@
     </div>
 
     <script>
-        // Função para limpar resultados
-        function clearResult(resultId) {
-            document.getElementById(resultId).innerHTML = '';
+        // Inicializar tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Função para limpar resultados e inputs
+        function clearResult(resultId, inputId = null) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.classList.add('collapsed');
+            resultDiv.innerHTML = '<button class="btn btn-link btn-sm" onclick="toggleResult(\'' + resultId + '\')">Expandir/Recolher</button>';
+            if (inputId) {
+                const input = document.getElementById(inputId);
+                input.value = '';
+                input.classList.remove('input-error');
+            }
+        }
+
+        // Função para expandir/recolher resultados
+        function toggleResult(resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.classList.toggle('collapsed');
         }
 
         // Funções de validação
@@ -327,10 +447,31 @@
             return null;
         }
 
+        function validateCambioDate(input) {
+            const value = input.value;
+            if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                input.classList.add('input-error');
+                return "Data deve estar no formato AAAA-MM-DD (ex.: 2025-04-15)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateCorretorasCNPJ(input) {
+            const value = input.value;
+            if (value && !/^\d{14}$/.test(value)) {
+                input.classList.add('input-error');
+                return "CNPJ deve ter 14 dígitos numéricos (ex.: 03614922000189)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
         // Funções de formatação
         function formatCEP(data) {
             const address = `${data.street}, ${data.neighborhood}, ${data.city} - ${data.state}, CEP: ${data.cep}`;
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('cep-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>CEP</th><td>${data.cep}</td></tr>
                     <tr><th>Rua</th><td>${data.street || 'Não disponível'}</td></tr>
@@ -350,6 +491,7 @@
 
         function formatBanks(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('banks-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <thead>
                         <tr><th>Código</th><th>Nome</th></tr>
@@ -363,8 +505,9 @@
 
         function formatCambio(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('cambio-result')">Expandir/Recolher</button>
                 <table class="table data-table">
-                    <tr><th>Moeda</th><td>${data.currency || 'Não disponível'}</td></tr>
+                    <tr><th>Moeda</th><td>${data.name || 'USD'}</td></tr>
                     <tr><th>Valor</th><td>${data.value || 'Não disponível'}</td></tr>
                     <tr><th>Data</th><td>${data.date || 'Não disponível'}</td></tr>
                 </table>
@@ -373,6 +516,7 @@
 
         function formatCNPJ(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('cnpj-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>CNPJ</th><td>${data.cnpj || 'Não disponível'}</td></tr>
                     <tr><th>Razão Social</th><td>${data.razao_social || 'Não disponível'}</td></tr>
@@ -383,20 +527,33 @@
         }
 
         function formatCorretoras(data) {
-            return `
-                <table class="table data-table">
-                    <thead>
-                        <tr><th>CNPJ</th><th>Nome</th></tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(corretora => `<tr><td>${corretora.cnpj || 'N/A'}</td><td>${corretora.nome_social || 'Não disponível'}</td></tr>`).join('')}
-                    </tbody>
-                </table>
-            `;
+            if (Array.isArray(data)) {
+                return `
+                    <button class="btn btn-link btn-sm" onclick="toggleResult('corretoras-result')">Expandir/Recolher</button>
+                    <table class="table data-table">
+                        <thead>
+                            <tr><th>CNPJ</th><th>Nome</th></tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(corretora => `<tr><td>${corretora.cnpj || 'N/A'}</td><td>${corretora.nome_social || 'Não disponível'}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                return `
+                    <button class="btn btn-link btn-sm" onclick="toggleResult('corretoras-result')">Expandir/Recolher</button>
+                    <table class="table data-table">
+                        <tr><th>CNPJ</th><td>${data.cnpj || 'Não disponível'}</td></tr>
+                        <tr><th>Nome Social</th><td>${data.nome_social || 'Não disponível'}</td></tr>
+                        <tr><th>Tipo</th><td>${data.tipo || 'Não disponível'}</td></tr>
+                    </table>
+                `;
+            }
         }
 
         function formatCPTEC(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('cptec-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Cidade</th><td>${data.cidade || 'Não disponível'}</td></tr>
                     <tr><th>Estado</th><td>${data.estado || 'Não disponível'}</td></tr>
@@ -417,6 +574,7 @@
 
         function formatDDD(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('ddd-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Estado</th><td>${data.state || 'Não disponível'}</td></tr>
                     <tr>
@@ -434,6 +592,7 @@
 
         function formatFeriados(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('feriados-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <thead>
                         <tr><th>Data</th><th>Nome</th></tr>
@@ -448,6 +607,7 @@
         function formatFIPE(data) {
             const firstItem = data[0] || {};
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('fipe-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Marca</th><td>${firstItem.marca || 'Não disponível'}</td></tr>
                     <tr><th>Modelo</th><td>${firstItem.modelo || 'Não disponível'}</td></tr>
@@ -460,6 +620,7 @@
         function formatIBGE(data) {
             const firstItem = data[0] || {};
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('ibge-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Nome</th><td>${firstItem.nome || 'Não disponível'}</td></tr>
                     <tr>
@@ -478,6 +639,7 @@
 
         function formatISBN(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('isbn-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>ISBN</th><td>${data.isbn || 'Não disponível'}</td></tr>
                     <tr><th>Título</th><td>${data.title || 'Não disponível'}</td></tr>
@@ -489,6 +651,7 @@
 
         function formatNCM(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('ncm-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Código</th><td>${data.codigo || 'Não disponível'}</td></tr>
                     <tr><th>Descrição</th><td>${data.descricao || 'Não disponível'}</td></tr>
@@ -499,6 +662,7 @@
 
         function formatPIX(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('pix-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <thead>
                         <tr><th>Nome</th><th>CNPJ</th></tr>
@@ -512,6 +676,7 @@
 
         function formatRegistroBR(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('registrobr-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     <tr><th>Domínio</th><td>${data.fqdn || 'Não disponível'}</td></tr>
                     <tr><th>Status</th><td>${data.status || 'Não disponível'}</td></tr>
@@ -529,6 +694,7 @@
 
         function formatTaxas(data) {
             return `
+                <button class="btn btn-link btn-sm" onclick="toggleResult('taxas-result')">Expandir/Recolher</button>
                 <table class="table data-table">
                     ${data.map(taxa => `
                         <tr><th>${taxa.nome || 'N/A'}</th><td>${taxa.valor || 'Não disponível'}</td></tr>
@@ -549,6 +715,9 @@
         // Função para fazer requisições sem input
         async function fetchData(endpoint, resultId, formatFn) {
             const resultDiv = document.getElementById(resultId);
+            const button = resultDiv.parentElement.querySelector('.btn-primary');
+            button.classList.add('btn-loading');
+            resultDiv.classList.remove('collapsed');
             resultDiv.innerHTML = '<div class="alert alert-info">Carregando...</div>';
             try {
                 const response = await fetch(endpoint);
@@ -556,25 +725,59 @@
                 if (data.status === 'success') {
                     resultDiv.innerHTML = formatFn(data.data);
                 } else {
-                    resultDiv.innerHTML = `<div class="alert alert-danger">Erro: ${data.message}</div>`;
+                    resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro: ${data.message}</div>`;
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="alert alert-danger">Erro de conexão: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro de conexão: ${error.message}</div>`;
+            } finally {
+                button.classList.remove('btn-loading');
             }
         }
 
         // Função para fazer requisições com input
-        async function fetchDataWithInput(endpoint, inputId, resultId, validateFn, formatFn) {
+        async function fetchDataWithInput(endpoint, inputId, resultId, validateFn, formatFn, isQueryParam = false) {
             const input = document.getElementById(inputId);
             const resultDiv = document.getElementById(resultId);
+            const button = resultDiv.parentElement.querySelector('.btn-primary');
             const validationError = validateFn(input);
             
             if (validationError) {
-                resultDiv.innerHTML = `<div class="alert alert-warning">${validationError}</div>`;
+                resultDiv.classList.remove('collapsed');
+                resultDiv.innerHTML = `<div class="alert alert-warning"><i class="bi bi-exclamation-circle"></i> ${validationError}</div>`;
                 return;
             }
 
-            fetchData(endpoint + input.value, resultId, formatFn);
+            button.classList.add('btn-loading');
+            resultDiv.classList.remove('collapsed');
+            resultDiv.innerHTML = '<div class="alert alert-info">Carregando...</div>';
+
+            let url = endpoint;
+            if (isQueryParam) {
+                const value = input.value;
+                if (value) {
+                    if (endpoint === '/api/cambio') {
+                        url += `?date=${value}`;
+                    } else if (endpoint === '/api/corretoras') {
+                        url += `?cnpj=${value}`;
+                    }
+                }
+            } else {
+                url += input.value;
+            }
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = formatFn(data.data);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro de conexão: ${error.message}</div>`;
+            } finally {
+                button.classList.remove('btn-loading');
+            }
         }
     </script>
 
