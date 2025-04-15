@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrasilAPI Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .input-error {
+            border-color: #dc3545;
+        }
+        .data-table th {
+            width: 30%;
+            font-weight: bold;
+            background-color: #f1f1f1;
+        }
+        .data-table td, .data-table th {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .copy-btn {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">BrasilAPI Explorer</h1>
+        <div class="row">
+            <!-- Bancos -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Bancos</h5>
+                        <button class="btn btn-primary me-2" onclick="fetchData('/api/banks', 'banks-result', formatBanks)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('banks-result')">Limpar</button>
+                        <div id="banks-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Câmbio -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Câmbio (USD)</h5>
+                        <button class="btn btn-primary me-2" onclick="fetchData('/api/cambio', 'cambio-result', formatCambio)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('cambio-result')">Limpar</button>
+                        <div id="cambio-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- CEP -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">CEP</h5>
+                        <input type="text" id="cep-input" class="form-control mb-2" placeholder="Ex.: 01001000">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cep/', 'cep-input', 'cep-result', validateCEP, formatCEP)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('cep-result')">Limpar</button>
+                        <div id="cep-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- CNPJ -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">CNPJ</h5>
+                        <input type="text" id="cnpj-input" class="form-control mb-2" placeholder="Ex.: 27865757000102">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cnpj/', 'cnpj-input', 'cnpj-result', validateCNPJ, formatCNPJ)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('cnpj-result')">Limpar</button>
+                        <div id="cnpj-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Corretoras -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Corretoras</h5>
+                        <button class="btn btn-primary me-2" onclick="fetchData('/api/corretoras', 'corretoras-result', formatCorretoras)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('corretoras-result')">Limpar</button>
+                        <div id="corretoras-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- CPTEC -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">CPTEC (Clima)</h5>
+                        <input type="text" id="cptec-input" class="form-control mb-2" placeholder="Código da cidade (ex.: 244)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/cptec/', 'cptec-input', 'cptec-result', validateCityCode, formatCPTEC)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('cptec-result')">Limpar</button>
+                        <div id="cptec-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- DDD -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">DDD</h5>
+                        <input type="text" id="ddd-input" class="form-control mb-2" placeholder="Ex.: 11">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ddd/', 'ddd-input', 'ddd-result', validateDDD, formatDDD)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('ddd-result')">Limpar</button>
+                        <div id="ddd-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Feriados -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Feriados Nacionais</h5>
+                        <input type="text" id="feriados-input" class="form-control mb-2" placeholder="Ano (ex.: 2025)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/feriados/', 'feriados-input', 'feriados-result', validateYear, formatFeriados)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('feriados-result')">Limpar</button>
+                        <div id="feriados-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- FIPE -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">FIPE</h5>
+                        <input type="text" id="fipe-input" class="form-control mb-2" placeholder="Código FIPE (ex.: 038003-1)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/fipe/', 'fipe-input', 'fipe-result', validateFIPE, formatFIPE)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('fipe-result')">Limpar</button>
+                        <div id="fipe-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- IBGE -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">IBGE (Nomes)</h5>
+                        <input type="text" id="ibge-input" class="form-control mb-2" placeholder="Nome (ex.: Maria)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ibge/nomes/', 'ibge-input', 'ibge-result', validateName, formatIBGE)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('ibge-result')">Limpar</button>
+                        <div id="ibge-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ISBN -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">ISBN</h5>
+                        <input type="text" id="isbn-input" class="form-control mb-2" placeholder="Ex.: 9788532503411">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/isbn/', 'isbn-input', 'isbn-result', validateISBN, formatISBN)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('isbn-result')">Limpar</button>
+                        <div id="isbn-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- NCM -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">NCM</h5>
+                        <input type="text" id="ncm-input" class="form-control mb-2" placeholder="Código NCM (ex.: 0101.21.00)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/ncm/', 'ncm-input', 'ncm-result', validateNCM, formatNCM)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('ncm-result')">Limpar</button>
+                        <div id="ncm-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- PIX -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">PIX</h5>
+                        <button class="btn btn-primary me-2" onclick="fetchData('/api/pix', 'pix-result', formatPIX)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('pix-result')">Limpar</button>
+                        <div id="pix-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Registro BR -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Registro BR</h5>
+                        <input type="text" id="registrobr-input" class="form-control mb-2" placeholder="Domínio (ex.: google.com.br)">
+                        <button class="btn btn-primary me-2" onclick="fetchDataWithInput('/api/registrobr/', 'registrobr-input', 'registrobr-result', validateDomain, formatRegistroBR)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('registrobr-result')">Limpar</button>
+                        <div id="registrobr-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Taxas -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Taxas</h5>
+                        <button class="btn btn-primary me-2" onclick="fetchData('/api/taxas', 'taxas-result', formatTaxas)">Consultar</button>
+                        <button class="btn btn-secondary" onclick="clearResult('taxas-result')">Limpar</button>
+                        <div id="taxas-result" class="result"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função para limpar resultados
+        function clearResult(resultId) {
+            document.getElementById(resultId).innerHTML = '';
+        }
+
+        // Funções de validação
+        function validateCEP(input) {
+            const value = input.value;
+            if (!value || !/^\d{8}$/.test(value)) {
+                input.classList.add('input-error');
+                return "CEP deve ter 8 dígitos numéricos (ex.: 01001000)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateCNPJ(input) {
+            const value = input.value;
+            if (!value || !/^\d{14}$/.test(value)) {
+                input.classList.add('input-error');
+                return "CNPJ deve ter 14 dígitos numéricos (ex.: 27865757000102)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateCityCode(input) {
+            const value = input.value;
+            if (!value || !/^\d+$/.test(value)) {
+                input.classList.add('input-error');
+                return "Código da cidade deve ser numérico (ex.: 244)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateDDD(input) {
+            const value = input.value;
+            if (!value || !/^\d{2}$/.test(value)) {
+                input.classList.add('input-error');
+                return "DDD deve ter 2 dígitos numéricos (ex.: 11)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateYear(input) {
+            const value = input.value;
+            if (!value || !/^\d{4}$/.test(value) || value < 1900 || value > 2100) {
+                input.classList.add('input-error');
+                return "Ano deve estar entre 1900 e 2100 (ex.: 2025)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateFIPE(input) {
+            const value = input.value;
+            if (!value || !/^\d{6}-\d$/.test(value)) {
+                input.classList.add('input-error');
+                return "Código FIPE deve ter o formato XXXXXX-Y (ex.: 038003-1)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateName(input) {
+            const value = input.value;
+            if (!value || !/^[A-Za-zÀ-ÿ\s]+$/.test(value)) {
+                input.classList.add('input-error');
+                return "Nome deve conter apenas letras e espaços (ex.: Maria)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateISBN(input) {
+            const value = input.value;
+            if (!value || !/^\d{10}$|^\d{13}$/.test(value)) {
+                input.classList.add('input-error');
+                return "ISBN deve ter 10 ou 13 dígitos numéricos (ex.: 9788532503411)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateNCM(input) {
+            const value = input.value;
+            if (!value || !/^\d{4}\.\d{2}\.\d{2}$/.test(value)) {
+                input.classList.add('input-error');
+                return "Código NCM deve ter o formato XXXX.XX.XX (ex.: 0101.21.00)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        function validateDomain(input) {
+            const value = input.value;
+            if (!value || !/^[A-Za-z0-9-]+\.[A-Za-z]{2,}$/.test(value)) {
+                input.classList.add('input-error');
+                return "Domínio deve conter pelo menos um ponto (ex.: google.com.br)";
+            }
+            input.classList.remove('input-error');
+            return null;
+        }
+
+        // Funções de formatação
+        function formatCEP(data) {
+            const address = `${data.street}, ${data.neighborhood}, ${data.city} - ${data.state}, CEP: ${data.cep}`;
+            return `
+                <table class="table data-table">
+                    <tr><th>CEP</th><td>${data.cep}</td></tr>
+                    <tr><th>Rua</th><td>${data.street || 'Não disponível'}</td></tr>
+                    <tr><th>Bairro</th><td>${data.neighborhood || 'Não disponível'}</td></tr>
+                    <tr><th>Cidade</th><td>${data.city || 'Não disponível'}</td></tr>
+                    <tr><th>Estado</th><td>${data.state || 'Não disponível'}</td></tr>
+                    <tr>
+                        <th>Endereço Completo</th>
+                        <td>
+                            ${address}
+                            <button class="btn btn-sm btn-outline-secondary copy-btn ms-2" onclick="copyToClipboard('${address}')">Copiar</button>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function formatBanks(data) {
+            return `
+                <table class="table data-table">
+                    <thead>
+                        <tr><th>Código</th><th>Nome</th></tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(bank => `<tr><td>${bank.code || 'N/A'}</td><td>${bank.name || 'Não disponível'}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatCambio(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>Moeda</th><td>${data.currency || 'Não disponível'}</td></tr>
+                    <tr><th>Valor</th><td>${data.value || 'Não disponível'}</td></tr>
+                    <tr><th>Data</th><td>${data.date || 'Não disponível'}</td></tr>
+                </table>
+            `;
+        }
+
+        function formatCNPJ(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>CNPJ</th><td>${data.cnpj || 'Não disponível'}</td></tr>
+                    <tr><th>Razão Social</th><td>${data.razao_social || 'Não disponível'}</td></tr>
+                    <tr><th>Nome Fantasia</th><td>${data.nome_fantasia || 'Não disponível'}</td></tr>
+                    <tr><th>Situação Cadastral</th><td>${data.situacao_cadastral || 'Não disponível'}</td></tr>
+                </table>
+            `;
+        }
+
+        function formatCorretoras(data) {
+            return `
+                <table class="table data-table">
+                    <thead>
+                        <tr><th>CNPJ</th><th>Nome</th></tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(corretora => `<tr><td>${corretora.cnpj || 'N/A'}</td><td>${corretora.nome_social || 'Não disponível'}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatCPTEC(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>Cidade</th><td>${data.cidade || 'Não disponível'}</td></tr>
+                    <tr><th>Estado</th><td>${data.estado || 'Não disponível'}</td></tr>
+                    <tr><th>Atualizado em</th><td>${data.atualizado_em || 'Não disponível'}</td></tr>
+                    <tr>
+                        <th>Clima</th>
+                        <td>
+                            <ul>
+                                ${data.clima && data.clima.length > 0 ? data.clima.map(item => `
+                                    <li>Data: ${item.data || 'N/A'}, Condição: ${item.condicao_desc || 'N/A'}, Temp: ${item.min || 'N/A'}/${item.max || 'N/A'}</li>
+                                `).join('') : '<li>Não disponível</li>'}
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function formatDDD(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>Estado</th><td>${data.state || 'Não disponível'}</td></tr>
+                    <tr>
+                        <th>Cidades</th>
+                        <td>
+                            <ul>
+                                ${data.cities && data.cities.length > 0 ? data.cities.slice(0, 5).map(city => `<li>${city}</li>`).join('') : '<li>Não disponível</li>'}
+                                ${data.cities && data.cities.length > 5 ? '<li>...</li>' : ''}
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function formatFeriados(data) {
+            return `
+                <table class="table data-table">
+                    <thead>
+                        <tr><th>Data</th><th>Nome</th></tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(feriado => `<tr><td>${feriado.date || 'N/A'}</td><td>${feriado.name || 'Não disponível'}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatFIPE(data) {
+            const firstItem = data[0] || {};
+            return `
+                <table class="table data-table">
+                    <tr><th>Marca</th><td>${firstItem.marca || 'Não disponível'}</td></tr>
+                    <tr><th>Modelo</th><td>${firstItem.modelo || 'Não disponível'}</td></tr>
+                    <tr><th>Ano</th><td>${firstItem.ano_modelo || 'Não disponível'}</td></tr>
+                    <tr><th>Valor</th><td>${firstItem.valor || 'Não disponível'}</td></tr>
+                </table>
+            `;
+        }
+
+        function formatIBGE(data) {
+            const firstItem = data[0] || {};
+            return `
+                <table class="table data-table">
+                    <tr><th>Nome</th><td>${firstItem.nome || 'Não disponível'}</td></tr>
+                    <tr>
+                        <th>Frequência</th>
+                        <td>
+                            <ul>
+                                ${firstItem.frequencia && firstItem.frequencia.length > 0 ? firstItem.frequencia.map(freq => `
+                                    <li>Período: ${freq.periodo || 'N/A'}, Frequência: ${freq.frequencia || 'N/A'}</li>
+                                `).join('') : '<li>Não disponível</li>'}
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function formatISBN(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>ISBN</th><td>${data.isbn || 'Não disponível'}</td></tr>
+                    <tr><th>Título</th><td>${data.title || 'Não disponível'}</td></tr>
+                    <tr><th>Autor</th><td>${data.author || 'Não disponível'}</td></tr>
+                    <tr><th>Ano</th><td>${data.year || 'Não disponível'}</td></tr>
+                </table>
+            `;
+        }
+
+        function formatNCM(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>Código</th><td>${data.codigo || 'Não disponível'}</td></tr>
+                    <tr><th>Descrição</th><td>${data.descricao || 'Não disponível'}</td></tr>
+                    <tr><th>Data Início</th><td>${data.data_inicio || 'Não disponível'}</td></tr>
+                </table>
+            `;
+        }
+
+        function formatPIX(data) {
+            return `
+                <table class="table data-table">
+                    <thead>
+                        <tr><th>Nome</th><th>CNPJ</th></tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(participant => `<tr><td>${participant.nome || 'N/A'}</td><td>${participant.cnpj || 'N/A'}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatRegistroBR(data) {
+            return `
+                <table class="table data-table">
+                    <tr><th>Domínio</th><td>${data.fqdn || 'Não disponível'}</td></tr>
+                    <tr><th>Status</th><td>${data.status || 'Não disponível'}</td></tr>
+                    <tr>
+                        <th>Servidores DNS</th>
+                        <td>
+                            <ul>
+                                ${data.dns && data.dns.length > 0 ? data.dns.map(dns => `<li>${dns}</li>`).join('') : '<li>Não disponível</li>'}
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function formatTaxas(data) {
+            return `
+                <table class="table data-table">
+                    ${data.map(taxa => `
+                        <tr><th>${taxa.nome || 'N/A'}</th><td>${taxa.valor || 'Não disponível'}</td></tr>
+                    `).join('')}
+                </table>
+            `;
+        }
+
+        // Função para copiar texto para a área de transferência
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Texto copiado para a área de transferência!');
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+            });
+        }
+
+        // Função para fazer requisições sem input
+        async function fetchData(endpoint, resultId, formatFn) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = '<div class="alert alert-info">Carregando...</div>';
+            try {
+                const response = await fetch(endpoint);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = formatFn(data.data);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">Erro: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">Erro de conexão: ${error.message}</div>`;
+            }
+        }
+
+        // Função para fazer requisições com input
+        async function fetchDataWithInput(endpoint, inputId, resultId, validateFn, formatFn) {
+            const input = document.getElementById(inputId);
+            const resultDiv = document.getElementById(resultId);
+            const validationError = validateFn(input);
+            
+            if (validationError) {
+                resultDiv.innerHTML = `<div class="alert alert-warning">${validationError}</div>`;
+                return;
+            }
+
+            fetchData(endpoint + input.value, resultId, formatFn);
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
